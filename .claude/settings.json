@@ -25,7 +25,7 @@
       "Bash(gh pr view*)",
       "Bash(gh pr list*)",
       "Bash(gh issue view*)",
-      "Bash(rg *)",
+      "Bash(rg --glob !.env* --glob !*.pem --glob !*.key --glob !*credentials* *)",
       "Read(./**)",
       "Edit(./src/**)",
       "Edit(./tests/**)",
@@ -70,7 +70,18 @@
       "Bash(git push --force*)",
       "Bash(git push -f*)",
       "Bash(git reset --hard origin/main)",
-      "Bash(git reset --hard origin/master)"
+      "Bash(git reset --hard origin/master)",
+      "Bash(cat */.env*)",
+      "Bash(cat *.env*)",
+      "Bash(cat *credentials*)",
+      "Bash(cat *id_rsa*)",
+      "Bash(cat *.pem)",
+      "Bash(cat *.key)",
+      "Bash(head */.env*)",
+      "Bash(tail */.env*)",
+      "Bash(less */.env*)",
+      "Bash(grep * .env*)",
+      "Bash(grep * */.env*)"
     ]
   },
   "hooks": {
@@ -81,6 +92,16 @@
           {
             "type": "command",
             "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/protect-secrets.py",
+            "timeout": 5
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/bash-secrets-guard.py",
             "timeout": 5
           }
         ]

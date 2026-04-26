@@ -16,7 +16,7 @@ model: sonnet
 ## 1. タスク受領
 ユーザーから依頼を受けたら、3 LLMそれぞれに最適な形でプロンプトを整える:
 
-- **Claude**: `claude-reviewer` subagentに投げる（または現セッションで処理）
+- **Claude**: `code-reviewer` subagentに投げる（または現セッションで処理）
 - **Gemini**: `gemini-advisor` subagent経由
 - **Codex**: `codex-advisor` subagent経由
 
