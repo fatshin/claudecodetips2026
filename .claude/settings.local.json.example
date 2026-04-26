@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/claude-code-settings.json",
+  "_comment": "個人ローカル設定。.gitignoreで除外される。共有settings.jsonの上書き／追加用。",
+  "permissions": {
+    "allow": [
+      "Bash(open*)",
+      "Bash(code*)"
+    ]
+  },
+  "env": {
+    "_comment": "個人APIキー等。コミット禁止。",
+    "GITHUB_TOKEN_HINT": "ghコマンドで利用するなら gh auth login が原則"
+  }
+}

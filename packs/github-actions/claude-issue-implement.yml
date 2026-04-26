@@ -1,0 +1,94 @@
+name: Claude Issue Implement
+
+on:
+  issue_comment:
+    types: [created]
+  issues:
+    types: [labeled]
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  implement:
+    # トリガー条件:
+    #   1. Issueコメントに "@claude implement" を含む
+    #   2. Issueに "claude:implement" ラベルが付与された
+    if: |
+      (github.event_name == 'issue_comment' &&
+        contains(github.event.comment.body, '@claude implement') &&
+        !github.event.issue.pull_request) ||
+      (github.event_name == 'issues' &&
+        github.event.action == 'labeled' &&
+        github.event.label.name == 'claude:implement')
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install deps
+        run: npm ci
+
+      - name: Comment "Working on it"
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issue = context.issue.number;
+            await github.rest.issues.createComment({
+              ...context.repo, issue_number: issue,
+              body: '🤖 @claude が実装に着手しました。完了次第PRを作成します。\n進捗: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}'
+            });
+
+      - name: Run Claude Code Action
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          # Issueの内容を読んで実装し、ブランチを切ってPRを作成する
+          direct_prompt: |
+            このIssue (#${{ github.event.issue.number }}: ${{ github.event.issue.title }}) を実装してください。
+
+            手順:
+            1. Issue本文から要件を抽出
+            2. 関連ファイルを Read/Grep で探索
+            3. 計画を立てる（影響ファイル・実装ステップ・検証方法）
+            4. 計画通り実装
+            5. テスト・lint・型チェック実行（npm test, npm run lint, npm run typecheck）
+            6. すべて通過したら git checkout -b feat/issue-${{ github.event.issue.number }}
+            7. コミット → push → gh pr create
+
+            PR本文には:
+            - Closes #${{ github.event.issue.number }}
+            - 実装の概要（What）
+            - 設計判断（Why）
+            - 動作確認手順（How verified）
+
+            重要: テスト通らないコードは絶対にPR化しない。途中で詰まったらIssueに状況を返信。
+          allowed_tools: |
+            Bash(npm install),Bash(npm ci),Bash(npm test*),Bash(npm run lint*),Bash(npm run typecheck*),Bash(npm run build*),
+            Bash(git checkout*),Bash(git add*),Bash(git commit*),Bash(git push*),
+            Bash(gh pr create*),Bash(gh issue comment*),Bash(gh pr view*),
+            Read,Edit,Write,Grep,Glob
+
+      - name: Comment on failure
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.createComment({
+              ...context.repo,
+              issue_number: context.issue.number,
+              body: '⚠️ 実装に失敗しました。ログ: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}\n人間がレビューしてください。'
+            });

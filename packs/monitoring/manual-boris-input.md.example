@@ -1,0 +1,68 @@
+# Manual Boris Cherny Input
+
+> X.com (旧Twitter) と Threads は robots.txt の制約で自動取得が困難なため、
+> ここに手動でBoris Cherny の発信を貼り付けることで監視対象に取り込まれる。
+
+## 使い方
+
+1. Boris の X (https://x.com/bcherny) または Threads (https://threads.net/@boris_cherny) から
+   気になる発信を見つける
+2. このファイルに ↓ のフォーマットで追記
+3. `bash packs/monitoring/scripts/run-monitoring.sh` を実行（または週次自動実行を待つ）
+4. 過去のentry も残しておけば差分検知で重複Issue化を防げる
+
+## 投入フォーマット
+
+```
+---
+date: 2026-04-26
+source: x | threads | other
+url: https://x.com/bcherny/status/...
+---
+
+(ここに発言全文を貼る)
+```
+
+複数entryは `---` 区切りで並べる。
+
+## サンプル投入
+
+---
+date: 2026-04-23
+source: threads
+url: https://www.threads.com/@boris_cherny/post/DWfjq2hlMDP
+
+6/ Use the Chrome extension for frontend
+The most important tip for using Claude Code is: give Claude a way to verify its output. 
+Once you do that, Claude will iterate until the result is great.
+
+Think of it like an engineer: if you ask someone to build a website but they aren't 
+allowed to use a browser, will the result look good? Probably not. But if you give 
+them a browser, they will write code and iterate until it looks good.
+
+Download here: https://code.claude.com/docs/en/chrome
+
+---
+date: 2026-04-23
+source: threads
+url: https://www.threads.com/@boris_cherny/post/...
+
+I have dozens of Claudes running at all times, and this is how I do it.
+Use claude -w to start a new session in a worktree.
+
+For non-git VCS users, use the WorktreeCreate hook to add your own logic for 
+worktree creation.
+
+---
+
+## 投入推奨タイミング
+
+- Boris のXやThreadsで新ツイート見つけた時
+- Anthropic公式ブログで Claude Code 関連投稿があった時  
+- 重要な機能発表（カンファレンス・リリースノート）
+
+## 注意
+
+- 投入後は **week or monthlyの自動実行で取り込まれる**
+- 即座に分析したい時は `/check-updates` または手動で run-monitoring.sh 実行
+- 古いentry（90日超）は自動でcleanup候補になる

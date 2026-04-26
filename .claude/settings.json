@@ -1,0 +1,120 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "defaultMode": "acceptEdits",
+    "allow": [
+      "Bash(npm test*)",
+      "Bash(npm run lint*)",
+      "Bash(npm run build*)",
+      "Bash(npm run dev*)",
+      "Bash(pnpm test*)",
+      "Bash(pnpm run lint*)",
+      "Bash(pnpm run build*)",
+      "Bash(pytest*)",
+      "Bash(uv run*)",
+      "Bash(ruff check*)",
+      "Bash(ruff format*)",
+      "Bash(mypy*)",
+      "Bash(git status*)",
+      "Bash(git diff*)",
+      "Bash(git log*)",
+      "Bash(git add*)",
+      "Bash(git commit -m*)",
+      "Bash(git checkout -b*)",
+      "Bash(git branch*)",
+      "Bash(gh pr view*)",
+      "Bash(gh pr list*)",
+      "Bash(gh issue view*)",
+      "Bash(rg *)",
+      "Read(./**)",
+      "Edit(./src/**)",
+      "Edit(./tests/**)",
+      "Edit(./docs/**)",
+      "Write(./src/**)",
+      "Write(./tests/**)",
+      "Write(./docs/**)"
+    ],
+    "ask": [
+      "Bash(git push*)",
+      "Bash(gh pr create*)",
+      "Bash(gh pr merge*)",
+      "Bash(npm publish*)",
+      "Bash(pnpm publish*)",
+      "Bash(docker*)",
+      "Bash(kubectl*)",
+      "Bash(terraform*)",
+      "Bash(aws*)",
+      "Bash(gcloud*)"
+    ],
+    "deny": [
+      "Read(./.env)",
+      "Read(./.env.*)",
+      "Read(./secrets/**)",
+      "Read(./**/credentials*)",
+      "Read(./**/*.pem)",
+      "Read(./**/*.key)",
+      "Read(./**/id_rsa*)",
+      "Read(./**/.aws/**)",
+      "Read(./**/.ssh/**)",
+      "Edit(./.env)",
+      "Edit(./.env.*)",
+      "Edit(./.git/**)",
+      "Edit(./node_modules/**)",
+      "Edit(./.venv/**)",
+      "Edit(./dist/**)",
+      "Edit(./build/**)",
+      "Bash(rm -rf*)",
+      "Bash(curl * | bash)",
+      "Bash(curl * | sh)",
+      "Bash(wget * | bash)",
+      "Bash(git push --force*)",
+      "Bash(git push -f*)",
+      "Bash(git reset --hard origin/main)",
+      "Bash(git reset --hard origin/master)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Read|Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/protect-secrets.py",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/auto-format.sh",
+            "timeout": 30
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "prompt",
+            "prompt": "完了前確認: テスト走った／lint通った／変更箇所要約済か。未済なら 'block' と理由を返す。"
+          }
+        ]
+      }
+    ]
+  },
+  "statusLine": {
+    "type": "command",
+    "command": "\"$CLAUDE_PROJECT_DIR\"/scripts/statusline.sh"
+  },
+  "env": {
+    "CLAUDE_BASH_MAINTAIN_PROJECT_WORKING_DIR": "1"
+  }
+}

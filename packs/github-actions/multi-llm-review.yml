@@ -1,0 +1,158 @@
+name: Multi-LLM PR Review
+
+on:
+  pull_request:
+    types: [opened, synchronize, ready_for_review]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  multi-review:
+    if: |
+      !github.event.pull_request.draft &&
+      (contains(github.event.pull_request.labels.*.name, 'multi-review') ||
+       github.event.pull_request.changed_files >= 5)
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        reviewer:
+          - { name: 'claude',  cmd: 'claude' }
+          - { name: 'gemini',  cmd: 'gemini' }
+          - { name: 'codex',   cmd: 'codex'  }
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get diff
+        id: diff
+        run: |
+          gh pr diff ${{ github.event.pull_request.number }} > /tmp/pr.diff
+          echo "size=$(wc -l < /tmp/pr.diff)" >> $GITHUB_OUTPUT
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install ${{ matrix.reviewer.name }} CLI
+        run: |
+          case "${{ matrix.reviewer.name }}" in
+            claude)
+              npm install -g @anthropic-ai/claude-code
+              ;;
+            gemini)
+              npm install -g @google/gemini-cli
+              ;;
+            codex)
+              npm install -g @openai/codex
+              ;;
+          esac
+
+      - name: Run ${{ matrix.reviewer.name }} review
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GEMINI_API_KEY:    ${{ secrets.GEMINI_API_KEY }}
+          OPENAI_API_KEY:    ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          PROMPT=$(cat <<'EOF'
+          以下のPR diffをレビューせよ。観点:
+          1. 正しさ（仕様一致・エッジケース）
+          2. セキュリティ（入力検証・認証認可・機密扱い）
+          3. パフォーマンス
+          4. テスト網羅性
+
+          出力フォーマット:
+          ## 総評: LGTM / Request Changes / Block
+          ## Critical（マージ不可）: ...
+          ## Major（修正推奨）: ...
+          ## Minor（後追い可）: ...
+
+          各指摘は [file:line] と修正案を必ず添える。
+          EOF
+          )
+
+          case "${{ matrix.reviewer.name }}" in
+            claude)
+              cat /tmp/pr.diff | claude -p "$PROMPT" \
+                --output-format text > /tmp/review-claude.md
+              ;;
+            gemini)
+              cat /tmp/pr.diff | gemini -p "$PROMPT" \
+                --output-format json | jq -r '.response' > /tmp/review-gemini.md
+              ;;
+            codex)
+              cat /tmp/pr.diff | codex exec - \
+                --sandbox read-only \
+                --output-last-message /tmp/review-codex.md \
+                "$PROMPT"
+              ;;
+          esac
+
+      - name: Upload review artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: review-${{ matrix.reviewer.name }}
+          path: /tmp/review-${{ matrix.reviewer.name }}.md
+
+  aggregate:
+    needs: multi-review
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all reviews
+        uses: actions/download-artifact@v4
+        with:
+          path: reviews/
+
+      - name: Aggregate with Claude
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          npm install -g @anthropic-ai/claude-code
+
+          # 3つのレビュー結果を結合
+          {
+            echo "# Multi-LLM PR Review"
+            echo ""
+            for r in claude gemini codex; do
+              if [ -f "reviews/review-$r/review-$r.md" ]; then
+                echo "## === Review by $r ==="
+                cat "reviews/review-$r/review-$r.md"
+                echo ""
+              fi
+            done
+          } > /tmp/all-reviews.md
+
+          # Claudeに集約させる
+          cat /tmp/all-reviews.md | claude -p '
+          上記は3つのLLMによる同一PRのレビュー結果。集約して以下を出力せよ:
+
+          ## 合意事項（3つすべてが指摘）
+          - ...
+
+          ## 多数決（2つ以上が指摘）
+          - ...
+
+          ## 個別指摘（1つだけ言及、ノイズの可能性）
+          - ...
+
+          ## 最終判定: LGTM / Request Changes / Block
+          根拠: ...
+
+          重複指摘は統合し、矛盾する指摘は両論併記して判断を下す。
+          ' --output-format text > /tmp/final-review.md
+
+      - name: Comment on PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const body = fs.readFileSync('/tmp/final-review.md', 'utf8');
+            await github.rest.issues.createComment({
+              ...context.repo,
+              issue_number: context.payload.pull_request.number,
+              body: `## 🤖 Multi-LLM Review (Claude + Gemini + Codex)\n\n${body}\n\n<details><summary>個別レビュー詳細はArtifactsを参照</summary></details>`
+            });

@@ -1,0 +1,23 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# Claude Code 個人設定（コミット禁止）
+.claude/settings.local.json
+
+# fan-outログ
+.claude/fanout-logs/
+
+# auto memory（Claudeが自動学習する個人ファイル）
+.claude/memory/
+
+# 一般的な機密
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+secrets/
+credentials.json
+.aws/
+.ssh/

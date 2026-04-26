@@ -1,0 +1,44 @@
+name: Claude Issue Triage
+
+on:
+  issues:
+    types: [opened, reopened]
+
+permissions:
+  issues: write
+  contents: read
+
+jobs:
+  triage:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run Claude Triage
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          direct_prompt: |
+            このIssueをtriageしてください: #${{ github.event.issue.number }}
+
+            実施事項:
+            1. Issue内容を分析し、以下のラベルを付与（gh issue edit でラベル追加）:
+               - 種別: bug / feature / refactor / docs / question
+               - 影響範囲: area:auth / area:billing / area:api / area:ui / area:infra
+               - 優先度: priority:p0(緊急) / p1(高) / p2(中) / p3(低)
+               - 工数見積: size:xs(1h) / s(半日) / m(1日) / l(数日) / xl(1週間+)
+
+            2. Issue本文に不足情報があれば質問コメントを投稿:
+               - bugの場合: 再現手順・期待動作・実際の動作・環境
+               - featureの場合: 受入基準・代替案検討・優先理由
+
+            3. priority:p0/p1かつsize:xs/sなら "claude:implement" ラベルも付与
+               （自動実装workflowが走る）
+
+            4. 重複Issueの可能性があれば search で過去Issue確認し、コメントで言及
+
+            最後に triage結果のサマリーを1コメントにまとめる。
+          allowed_tools: |
+            Bash(gh issue edit*),Bash(gh issue comment*),Bash(gh issue list*),Bash(gh search issues*),
+            Read,Grep,Glob

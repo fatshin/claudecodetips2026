@@ -1,0 +1,69 @@
+{
+  "_doc": "プロジェクトルートに .mcp.json として配置。環境変数は .env.local 経由で渡す。",
+  "mcpServers": {
+    "github": {
+      "_purpose": "GitHub Issue/PR/Repo操作。@claude メンションでの実装フローと併用。",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-github"],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_PERSONAL_ACCESS_TOKEN}"
+      }
+    },
+
+    "slack": {
+      "_purpose": "Slackチャンネル投稿・スレッド読込。リリース通知・障害連絡の自動化に。",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-slack"],
+      "env": {
+        "SLACK_BOT_TOKEN": "${SLACK_BOT_TOKEN}",
+        "SLACK_TEAM_ID": "${SLACK_TEAM_ID}",
+        "SLACK_CHANNEL_IDS": "${SLACK_CHANNEL_IDS}"
+      }
+    },
+
+    "aws-bedrock": {
+      "_purpose": "Bedrock Knowledge Bases / Foundation Modelsへの問い合わせ。RAG設計検証用。",
+      "_note": "公式MCPは awslabs.mcp 配下を参照。例として bedrock-kb-server を指定。",
+      "command": "uvx",
+      "args": ["awslabs.bedrock-kb-retrieval-mcp-server@latest"],
+      "env": {
+        "AWS_PROFILE": "${AWS_PROFILE:-default}",
+        "AWS_REGION": "${AWS_REGION:-ap-northeast-1}",
+        "KB_INCLUSION_TAG_KEY": "mcp-multirag"
+      }
+    },
+
+    "dify": {
+      "_purpose": "Dify Workflow/Agent をツールとして呼ぶ。Dify Community Edition (Self-hosted) 想定。",
+      "_note": "Difyの各Workflowを別MCPサーバーとして登録するパターンが現状実用的。",
+      "command": "npx",
+      "args": ["-y", "@bschoolr/dify-mcp-server"],
+      "env": {
+        "DIFY_API_KEY": "${DIFY_API_KEY}",
+        "DIFY_BASE_URL": "${DIFY_BASE_URL:-https://api.dify.ai/v1}",
+        "DIFY_APP_TYPE": "workflow"
+      }
+    },
+
+    "filesystem": {
+      "_purpose": "プロジェクト外のドキュメントを参照（--add-dirの代替）。",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-filesystem",
+        "${HOME}/notes",
+        "${HOME}/templates"
+      ]
+    },
+
+    "postgres": {
+      "_purpose": "ローカル/開発DBの読み取り。データ調査・スキーマ確認・分析。",
+      "_note": "本番DBは絶対に接続しない。read-only接続文字列を使う。",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-postgres"],
+      "env": {
+        "POSTGRES_CONNECTION_STRING": "${POSTGRES_DEV_RO_URL}"
+      }
+    }
+  }
+}

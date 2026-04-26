@@ -1,0 +1,117 @@
+name: Research Preview Watch
+
+# 月次でClaude Code の研究プレビュー機能をウォッチし、
+# 変化があればIssueを起票する
+
+on:
+  schedule:
+    - cron: '0 0 1 * *'   # 毎月1日 UTC 0:00 = JST 9:00
+  workflow_dispatch:
+
+permissions:
+  issues: write
+  contents: read
+
+jobs:
+  watch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      
+      - name: Install Claude Code
+        run: npm install -g @anthropic-ai/claude-code
+      
+      - name: Get current version & commands
+        id: snapshot
+        run: |
+          echo "version=$(claude --version 2>&1 | tail -1)" >> $GITHUB_OUTPUT
+          # 利用可能コマンド一覧（/help の出力）
+          # 実際には対話モードなので、helpを別経路で取得が必要
+          # ここではバージョンとリリースノートだけで簡易検出
+      
+      - name: Get latest GitHub release
+        id: release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          LATEST=$(gh release list --repo anthropics/claude-code --limit 1 --json tagName,publishedAt --jq '.[0]')
+          echo "latest_tag=$(echo $LATEST | jq -r .tagName)" >> $GITHUB_OUTPUT
+          echo "published_at=$(echo $LATEST | jq -r .publishedAt)" >> $GITHUB_OUTPUT
+          
+          # 過去30日以内のリリース全部
+          gh release list --repo anthropics/claude-code --limit 20 --json tagName,publishedAt,name \
+            --jq "[.[] | select(.publishedAt > \"$(date -u -d '30 days ago' +%Y-%m-%dT%H:%M:%SZ)\")]" > /tmp/recent.json
+      
+      - name: Run Claude analysis
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Claudeに過去30日のリリースノートを分析させて、
+          # 研究プレビュー機能の状態変化をまとめさせる
+          cat /tmp/recent.json | claude -p '
+          以下はClaude Codeの過去30日のGitHub releases。
+          以下の研究プレビュー機能について、状態（🟢GA/🟡Beta/🟠Preview/🔴未公開）と
+          変更点をまとめよ:
+          
+          - Remote Control
+          - /teleport
+          - /loop
+          - /branch / /fork-session
+          - /batch
+          - /simplify
+          - /ultrareview
+          - /ultraplan
+          - Routines
+          - WorktreeCreate hook
+          - Channels (MCP push)
+          - Dispatch
+          - iOS/Android Code tab
+          
+          各機能について:
+          - 状態
+          - 直近30日の変化（あれば）
+          - 自家製パックへの影響
+          - 推奨アクション
+          
+          リリースノートに記載が無い機能は「変化無し」と書く。
+          ' --output-format text > /tmp/analysis.md
+      
+      - name: Create or update issue
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          DATE=$(date -u +%Y-%m-%d)
+          TITLE="[Watch] 研究プレビュー機能調査 $DATE"
+          
+          BODY=$(cat <<EOF
+          ## 自動生成された月次ウォッチレポート
+          
+          - 実行日時: $(date -u +%Y-%m-%dT%H:%M:%SZ)
+          - Claude Code バージョン: ${{ steps.snapshot.outputs.version }}
+          - 最新リリース: ${{ steps.release.outputs.latest_tag }} (${{ steps.release.outputs.published_at }})
+          
+          ## 機能別状態
+          
+          $(cat /tmp/analysis.md)
+          
+          ## アクション
+          
+          - [ ] レビュー
+          - [ ] 自家製パックの更新検討
+          - [ ] 公式機能への移行判断
+          
+          ---
+          詳細手順: \`.github/ISSUE_TEMPLATE/research-preview-watch.md\` 参照
+          EOF
+          )
+          
+          gh issue create \
+            --title "$TITLE" \
+            --label "research-preview,watch,automated" \
+            --body "$BODY"

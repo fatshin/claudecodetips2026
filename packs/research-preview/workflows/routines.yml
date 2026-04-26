@@ -1,0 +1,110 @@
+name: Claude Routines
+
+# 各種定期タスクをまとめたworkflow
+# JSTで考える: cron式は -9時間（UTC基準）
+
+on:
+  schedule:
+    # 毎朝 JST 9:00（UTC 0:00）平日: open PR サマリー
+    - cron: '0 0 * * 1-5'
+    # 毎週金 JST 17:00（UTC 8:00）: CLAUDE.md棚卸し
+    - cron: '0 8 * * 5'
+    # 毎月1日 JST 10:00（UTC 1:00）: 月次レポート
+    - cron: '0 1 1 * *'
+  workflow_dispatch:
+    inputs:
+      task:
+        description: '実行タスク'
+        required: true
+        type: choice
+        options:
+          - morning-pr-summary
+          - weekly-claude-md-review
+          - monthly-report
+
+permissions:
+  contents: write
+  pull-requests: read
+  issues: write
+
+jobs:
+  morning-pr-summary:
+    if: |
+      github.event.schedule == '0 0 * * 1-5' ||
+      github.event.inputs.task == 'morning-pr-summary'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          direct_prompt: |
+            open状態のPRをサマリー化し、以下を含むIssueを作成:
+
+            ## レビュー待ち（assignee別）
+            ## マージ可能（CI green、approved済）
+            ## CI失敗中
+            ## 1週間以上動きのないPR
+
+            Issue titleは "Daily PR Summary YYYY-MM-DD" 形式。
+            既存のSummary Issueがあれば古いものをcloseしてから新規作成。
+          allowed_tools: |
+            Bash(gh pr list*),Bash(gh pr view*),Bash(gh issue*),
+            Read,Grep,Glob
+
+  weekly-claude-md-review:
+    if: |
+      github.event.schedule == '0 8 * * 5' ||
+      github.event.inputs.task == 'weekly-claude-md-review'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          direct_prompt: |
+            CLAUDE.md（root + 全サブディレクトリ）を棚卸し:
+
+            1. find . -name CLAUDE.md -not -path './node_modules/*' で全部リストアップ
+            2. 各ファイルのgit logで最終更新日確認
+            3. 90日以上更新されてないルールを「廃止候補」としてマーク
+            4. 直近のコミットでこれらルール違反していないか確認
+            5. 矛盾検出（CLAUDE.mdに「Aは禁止」と書いてあるのにコードでAが使われている）
+
+            結果をIssue起票:
+            - title: "CLAUDE.md weekly review YYYY-MM-DD"
+            - body: 廃止候補リスト + 矛盾箇所 + 確認すべきPR
+
+            重要なルール削除はしない（提案のみ）。
+          allowed_tools: |
+            Bash(find*),Bash(git log*),Bash(git diff*),Bash(gh issue*),
+            Bash(rg*),Read,Grep,Glob
+
+  monthly-report:
+    if: |
+      github.event.schedule == '0 1 1 * *' ||
+      github.event.inputs.task == 'monthly-report'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          direct_prompt: |
+            前月の活動サマリーを生成:
+
+            ## マージされたPR数
+            ## クローズされたIssue数
+            ## 主要な変更（feat: のコミット）
+            ## バグ修正（fix: のコミット）
+            ## 技術的負債の変動（rg TODO|FIXME のdiff）
+            ## CLAUDE.md追記履歴
+
+            結果を docs/monthly-reports/YYYY-MM.md として保存し、commitしてpush。
+            また、Issue起票してチームに通知。
+          allowed_tools: |
+            Bash(git log*),Bash(git diff*),Bash(gh*),Bash(rg*),Bash(git add*),
+            Bash(git commit*),Bash(git push*),
+            Read,Edit,Write

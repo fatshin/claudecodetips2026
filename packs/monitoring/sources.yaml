@@ -1,0 +1,92 @@
+# Monitoring sources for Boris Cherny / Claude Code official docs
+# 編集してプロジェクトの実情に合わせる
+
+# === GitHub releases（最も確実）===
+github:
+  - name: claude-code
+    repo: anthropics/claude-code
+    type: release
+    enabled: true
+
+  - name: claude-code-action
+    repo: anthropics/claude-code-action
+    type: release
+    enabled: true
+
+  - name: claude-code-docs
+    repo: anthropics/claude-code-docs
+    type: commits
+    branch: main
+    enabled: true   # ない場合は false
+
+# === Web fetch可能な公式ドキュメント ===
+web:
+  - name: claude-code-overview
+    url: https://code.claude.com/docs/en/overview
+    enabled: true
+
+  - name: claude-code-changelog
+    url: https://code.claude.com/docs/en/changelog
+    enabled: true
+
+  - name: claude-code-hooks
+    url: https://code.claude.com/docs/en/hooks
+    enabled: true
+
+  - name: claude-code-permissions
+    url: https://code.claude.com/docs/en/permissions
+    enabled: true
+
+  - name: claude-code-subagents
+    url: https://code.claude.com/docs/en/subagents
+    enabled: true
+
+  - name: claude-code-skills
+    url: https://code.claude.com/docs/en/skills
+    enabled: true
+
+  - name: claude-code-chrome
+    url: https://code.claude.com/docs/en/chrome
+    enabled: true
+
+  - name: anthropic-news
+    url: https://www.anthropic.com/news
+    enabled: true
+
+# === Boris Cherny の発信（fetchはrobots.txtで困難なので代替手段）===
+boris:
+  # X.com は robots.txt で web_fetch がブロックされる
+  # → RSS bridgeサービス利用 / GitHub Actions の専用action / 手動投入の3択
+  
+  # Option 1: RSS bridgeサービス（公開無料/有料あり）
+  rss:
+    - name: bcherny-x-rss
+      url: https://rsshub.app/twitter/user/bcherny     # rsshub.appの公開instance
+      enabled: false   # public instanceは不安定。self-host推奨。
+    
+    - name: boris-cherny-threads-rss
+      url: https://rsshub.app/threads/boris_cherny
+      enabled: false
+
+  # Option 2: nitter mirror（生存しているもののみ）
+  nitter:
+    - name: bcherny-nitter
+      url: https://nitter.privacydev.net/bcherny/rss
+      enabled: false   # mirrorは閉鎖が多い。動作確認してから有効化。
+
+  # Option 3: 手動投入（最も確実）
+  # docs/manual-boris-input.md にBorisの発言を貼り付けると拾われる
+  manual:
+    enabled: true
+    file: docs/manual-boris-input.md
+
+  # Option 4: Search API経由（X API有料 or Gemini CLIでweb検索）
+  search:
+    - name: gemini-search-boris
+      query: "boris cherny claude code site:threads.net OR site:x.com"
+      enabled: true   # Gemini CLI（または web_search ツール）で検索
+
+# === スナップショット保持 ===
+snapshot:
+  retention_days: 90    # 90日分保持
+  diff_threshold: 50    # 50字以下の差分は通知しない（typo修正等）
