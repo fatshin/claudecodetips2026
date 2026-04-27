@@ -74,11 +74,12 @@ export LOG_DIR PROMPT
 if command -v parallel >/dev/null 2>&1; then
   echo "$TARGET" | parallel -j "$PARALLEL" run_one {}
 else
-  # parallel未インストール時の代替（xargs）
-  echo "$TARGET" | xargs -I {} -P "$PARALLEL" bash -c 'run_one "$@"' _ {}
+  # parallel未インストール時の代替（xargs + 関数定義インライン）
+  echo "$TARGET" | xargs -I {} -P "$PARALLEL" bash -c "$(declare -f run_one); run_one \"\$@\"" _ {}
 fi
 
 echo ""
 echo "=== 完了。ログ: $LOG_DIR ==="
-echo "失敗件数: $(grep -l FAIL "$LOG_DIR"/*.log 2>/dev/null | wc -l)"
+FAIL_COUNT=$(find "$LOG_DIR" -name '*.log' -exec grep -l 'error\|Error\|FAIL' {} \; 2>/dev/null | wc -l | tr -d ' ')
+echo "失敗件数: $FAIL_COUNT"
 echo "git status で差分確認 → 問題なければまとめてコミット"

@@ -21,13 +21,6 @@ $ARGUMENTS を**最大強度**でレビュー。記事のultrareview相当を自
 
 # 手順
 
-```bash
-# 内部的に以下を実施
-bash scripts/ultrareview.sh $ARGUMENTS
-```
-
-無ければ手動で：
-
 1. 対象を読み取り（`gh pr diff` / `git diff` / `cat`）
 2. 上記7 subagentを並列起動（Taskツール経由）
 3. それぞれの結果を `.claude/ultrareview-history/<ts>/` に保存

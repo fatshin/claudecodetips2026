@@ -92,6 +92,16 @@ for p in "${SELECTED_PACKS[@]}"; do
   fi
 done
 
+# 重複排除
+UNIQUE_PACKS=()
+declare -A _seen=()
+for p in "${SELECTED_PACKS[@]}"; do
+  [ -n "${_seen[$p]:-}" ] && continue
+  _seen[$p]=1
+  UNIQUE_PACKS+=("$p")
+done
+SELECTED_PACKS=("${UNIQUE_PACKS[@]}")
+
 echo "=== 導入対象 ==="
 for p in "${SELECTED_PACKS[@]}"; do echo "  - $p"; done
 echo ""

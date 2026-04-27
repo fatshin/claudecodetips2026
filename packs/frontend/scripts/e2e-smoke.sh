@@ -16,8 +16,8 @@ if ! command -v npx >/dev/null 2>&1; then
   exit 1
 fi
 
-SCRIPT="$(mktemp --suffix=.js)"
-trap "rm -f $SCRIPT" EXIT
+SCRIPT="$(mktemp "${TMPDIR:-/tmp}/e2e-XXXXXX").js"
+trap 'rm -f "$SCRIPT"' EXIT
 
 # プロジェクト固有のテストがあれば優先実行
 if [ -d "tests/e2e" ] || [ -d "e2e" ] || [ -f "playwright.config.ts" ] || [ -f "playwright.config.js" ]; then

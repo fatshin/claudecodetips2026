@@ -4,19 +4,36 @@ PreToolUse hook: 機密ファイルへのRead/Edit/Writeをブロック。
 settings.jsonのdenyルールが効かないバグ（CVE級の懸念あり）の回避策。
 公式GitHub issue #6699 を参照。
 """
+
 import json
 import sys
 from pathlib import Path
 
 # ブロック対象パターン（ファイル名 or 拡張子）
 SENSITIVE_NAMES = {
-    ".env", ".env.local", ".env.production", ".env.development",
-    "credentials.json", "credentials", "secrets.json", "secrets.yaml",
-    "id_rsa", "id_ed25519", "id_dsa", ".npmrc", ".pypirc", ".dockercfg",
-    "config.json",  # 注意: 一般的すぎるなら除外
+    ".env",
+    ".env.local",
+    ".env.production",
+    ".env.development",
+    "credentials.json",
+    "credentials",
+    "secrets.json",
+    "secrets.yaml",
+    "id_rsa",
+    "id_ed25519",
+    "id_dsa",
+    ".npmrc",
+    ".pypirc",
+    ".netrc",
+    ".dockercfg",
+    "kubeconfig",
+    "terraform.tfstate",
+    "terraform.tfstate.backup",
 }
+SAFE_NAMES = {".env.example", ".env.template", ".env.sample"}
 SENSITIVE_EXT = {".pem", ".key", ".p12", ".pfx", ".keystore"}
 SENSITIVE_DIR_KEYS = {"secrets", ".aws", ".ssh", ".gnupg"}
+
 
 def main() -> None:
     try:
@@ -33,6 +50,9 @@ def main() -> None:
     name = p.name.lower()
     ext = p.suffix.lower()
     parts = {part.lower() for part in p.parts}
+
+    if name in SAFE_NAMES:
+        sys.exit(0)
 
     blocked = (
         name in SENSITIVE_NAMES
@@ -55,6 +75,7 @@ def main() -> None:
     }
     print(json.dumps(decision))
     sys.exit(0)
+
 
 if __name__ == "__main__":
     main()

@@ -42,16 +42,17 @@ for BRANCH in "$@"; do
       || git worktree add "$WT_PATH" "$BRANCH"
   fi
 
+  ESCAPED_PATH="$(printf '%q' "$WT_PATH")"
   if [ "$USE_TMUX" -eq 1 ]; then
     if [ "$INDEX" -eq 1 ]; then
-      tmux send-keys -t "$SESSION" "cd $WT_PATH && claude" C-m
+      tmux send-keys -t "$SESSION" "cd ${ESCAPED_PATH} && claude" C-m
     else
       tmux split-window -t "$SESSION" -c "$WT_PATH"
       tmux send-keys -t "$SESSION" "claude" C-m
       tmux select-layout -t "$SESSION" tiled
     fi
   else
-    echo "  起動コマンド: cd $WT_PATH && claude"
+    echo "  起動コマンド: cd ${ESCAPED_PATH} && claude"
   fi
 done
 

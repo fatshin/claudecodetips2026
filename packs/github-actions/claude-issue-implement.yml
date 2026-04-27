@@ -35,13 +35,27 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Setup environment
+        run: |
+          if [ -f "package-lock.json" ] || [ -f "package.json" ]; then
+            echo "LANG_TYPE=node" >> "$GITHUB_ENV"
+          elif [ -f "pyproject.toml" ] || [ -f "requirements.txt" ]; then
+            echo "LANG_TYPE=python" >> "$GITHUB_ENV"
+          elif [ -f "go.mod" ]; then
+            echo "LANG_TYPE=go" >> "$GITHUB_ENV"
+          else
+            echo "LANG_TYPE=unknown" >> "$GITHUB_ENV"
+          fi
+
       - name: Setup Node
+        if: env.LANG_TYPE == 'node'
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
 
-      - name: Install deps
+      - name: Install deps (Node)
+        if: env.LANG_TYPE == 'node'
         run: npm ci
 
       - name: Comment "Working on it"

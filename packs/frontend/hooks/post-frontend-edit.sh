@@ -41,7 +41,8 @@ fi
 
 # 軽量a11yチェック（タイムアウト短め）
 echo "[hook] 軽量a11yチェック実行中..." >&2
-timeout 30 bash "$CLAUDE_PROJECT_DIR/scripts/axe-check.sh" "$DEV_URL" wcag21aa json 2>/dev/null \
+_timeout() { if command -v gtimeout >/dev/null 2>&1; then gtimeout "$@"; elif command -v timeout >/dev/null 2>&1; then timeout "$@"; else shift; "$@"; fi; }
+_timeout 30 bash "$CLAUDE_PROJECT_DIR/scripts/axe-check.sh" "$DEV_URL" wcag21aa json 2>/dev/null \
   | tail -5 >&2 || echo "[hook] a11yチェック skip/失敗" >&2
 
 exit 0

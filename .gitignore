@@ -25,3 +25,11 @@ secrets/
 credentials.json
 .aws/
 .ssh/
+
+# レビュー・QA成果物（ローカル生成物）
+.claude/cross-review-history/
+.claude/ultrareview-history/
+lighthouse-reports/
+axe-reports/
+e2e-reports/
+docs/screenshots/

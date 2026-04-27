@@ -10,6 +10,8 @@
 
 set -euo pipefail
 
+_hash() { command -v md5sum >/dev/null 2>&1 && md5sum | cut -d' ' -f1 || md5 -q; }
+
 OUT_DIR="${1:-packs/monitoring/snapshots/$(date +%Y%m%d)}"
 mkdir -p "$OUT_DIR/boris"
 
@@ -24,7 +26,7 @@ RSS_SOURCES=(
 )
 
 for rss_url in "${RSS_SOURCES[@]}"; do
-  name="$(echo "$rss_url" | md5sum | cut -d' ' -f1 | head -c8)"
+  name="$(echo "$rss_url" | _hash | head -c8)"
   echo "  → $rss_url" >&2
   if curl -sf -m 10 "$rss_url" -o "$OUT_DIR/boris/rss-$name.xml" 2>/dev/null; then
     if [ -s "$OUT_DIR/boris/rss-$name.xml" ]; then
@@ -50,7 +52,7 @@ NITTER_MIRRORS=(
 )
 
 for mirror_url in "${NITTER_MIRRORS[@]}"; do
-  name="$(echo "$mirror_url" | md5sum | cut -d' ' -f1 | head -c8)"
+  name="$(echo "$mirror_url" | _hash | head -c8)"
   echo "  → $mirror_url" >&2
   if curl -sf -m 10 "$mirror_url" -o "$OUT_DIR/boris/nitter-$name.xml" 2>/dev/null; then
     if [ -s "$OUT_DIR/boris/nitter-$name.xml" ] && grep -q '<item>' "$OUT_DIR/boris/nitter-$name.xml" 2>/dev/null; then

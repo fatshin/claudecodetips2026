@@ -32,7 +32,13 @@
       "Edit(./docs/**)",
       "Write(./src/**)",
       "Write(./tests/**)",
-      "Write(./docs/**)"
+      "Write(./docs/**)",
+      "Edit(./.claude/agents/**)",
+      "Edit(./.claude/commands/**)",
+      "Edit(./.claude/skills/**)",
+      "Write(./.claude/agents/**)",
+      "Write(./.claude/commands/**)",
+      "Write(./.claude/skills/**)"
     ],
     "ask": [
       "Bash(git push*)",

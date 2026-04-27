@@ -20,40 +20,45 @@ if ! command -v npx >/dev/null 2>&1; then
 fi
 
 # 一時的なPlaywrightスクリプト生成
-SCRIPT="$(mktemp --suffix=.js)"
-trap "rm -f $SCRIPT" EXIT
+SCRIPT="$(mktemp "${TMPDIR:-/tmp}/screenshot-XXXXXX").js"
+trap 'rm -f "$SCRIPT"' EXIT
+
+VP_W="$(echo "$VIEWPORT" | cut -d, -f1)"
+VP_H="$(echo "$VIEWPORT" | cut -d, -f2)"
+
+_jsesc() { printf '%s' "$1" | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read()), end="")'; }
+
+JS_URL=$(_jsesc "$URL")
+JS_OUTPUT=$(_jsesc "$OUTPUT")
+JS_DEVICE=$(_jsesc "$DEVICE")
 
 cat > "$SCRIPT" <<EOF
 const { chromium, devices } = require('playwright');
 (async () => {
+  const url = ${JS_URL};
+  const output = ${JS_OUTPUT};
+  const device = ${JS_DEVICE};
+  const vpW = ${VP_W}, vpH = ${VP_H};
+
   const browser = await chromium.launch();
-  const context = '$DEVICE' === 'mobile'
+  const context = device === 'mobile'
     ? await browser.newContext({ ...devices['iPhone 13'] })
-    : await browser.newContext({
-        viewport: { width: $(echo $VIEWPORT | cut -d, -f1), height: $(echo $VIEWPORT | cut -d, -f2) }
-      });
+    : await browser.newContext({ viewport: { width: vpW, height: vpH } });
   const page = await context.newPage();
-  
-  // console / network エラー収集
+
   const errors = [];
   page.on('console', msg => {
     if (msg.type() === 'error') errors.push('CONSOLE: ' + msg.text());
   });
   page.on('pageerror', err => errors.push('PAGEERROR: ' + err.message));
-  page.on('requestfailed', req => errors.push('REQ_FAILED: ' + req.url() + ' ' + req.failure()?.errorText));
-  
-  await page.goto('$URL', { waitUntil: 'networkidle', timeout: 30000 });
-  await page.waitForTimeout(500);  // 安定化のため
-  await page.screenshot({ path: '$OUTPUT', fullPage: true });
+  page.on('requestfailed', req => errors.push('REQ_FAILED: ' + req.url() + ' ' + (req.failure()?.errorText || '')));
+
+  await page.goto(url, { waitUntil: 'networkidle', timeout: 30000 });
+  await page.waitForTimeout(500);
+  await page.screenshot({ path: output, fullPage: true });
   await browser.close();
-  
-  console.log(JSON.stringify({
-    url: '$URL',
-    output: '$OUTPUT',
-    viewport: '$VIEWPORT',
-    device: '$DEVICE',
-    errors: errors,
-  }, null, 2));
+
+  console.log(JSON.stringify({ url, output, viewport: vpW+'x'+vpH, device, errors }, null, 2));
 })();
 EOF
 

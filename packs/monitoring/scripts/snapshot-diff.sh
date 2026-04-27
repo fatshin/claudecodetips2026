@@ -11,10 +11,10 @@ BASE_DIR="${2:-}"
 # baseが指定されてなければ、NEW_DIRの一つ前を自動選択
 if [ -z "$BASE_DIR" ]; then
   BASE_DIR=$(ls -d "$SNAPSHOTS_ROOT"/*/ 2>/dev/null \
+    | sed 's:/*$::' \
     | sort \
     | grep -v "$(basename "$NEW_DIR")" \
-    | tail -1 \
-    | xargs -I {} dirname {})
+    | tail -1)
   
   if [ -z "$BASE_DIR" ] || [ ! -d "$BASE_DIR" ]; then
     echo "✗ 比較対象のbase snapshotが見つからない（初回実行？）" >&2

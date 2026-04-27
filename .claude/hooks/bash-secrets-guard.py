@@ -40,6 +40,11 @@ READ_COMMANDS = re.compile(
 
 COMBINED = re.compile("|".join(SENSITIVE_PATTERNS), re.IGNORECASE)
 
+SAFE_PREFIXES = re.compile(
+    r"^\s*(git\s|echo\s|printf\s|python3?\s|node\s|npm\s|pnpm\s|yarn\s|"
+    r"bash\s+-n\s|shellcheck\s|find\s|ls\s|wc\s|mkdir\s|chmod\s|touch\s)"
+)
+
 
 def main() -> None:
     try:
@@ -50,6 +55,9 @@ def main() -> None:
     tool_input = data.get("tool_input", {}) or {}
     command = tool_input.get("command", "")
     if not command:
+        sys.exit(0)
+
+    if SAFE_PREFIXES.match(command):
         sys.exit(0)
 
     if READ_COMMANDS.search(command) and COMBINED.search(command):

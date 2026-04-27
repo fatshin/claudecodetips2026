@@ -15,7 +15,7 @@ argument-hint: [pr <番号> | diff [revision] | file <パス>]
 
 2. `multi-llm-coordinator` subagent を起動
 
-3. coordinator経由で `bash packs/multi-llm/scripts/cross-review.sh` を実行
+3. coordinator経由で `bash scripts/cross-review.sh` を実行
 
 4. 集約結果（synthesis.md）をユーザーに提示
 

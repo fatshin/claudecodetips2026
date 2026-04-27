@@ -34,7 +34,11 @@ fi
 
 # 3. scripts/ をコピー
 mkdir -p "$TARGET/scripts"
-cp "$KIT_DIR/scripts/"*.sh "$TARGET/scripts/"
+for f in "$KIT_DIR/scripts/"*.sh; do
+  name="$(basename "$f")"
+  case "$name" in install.sh|install-packs.sh) continue ;; esac
+  cp "$f" "$TARGET/scripts/$name"
+done
 chmod +x "$TARGET/scripts/"*.sh
 
 # 4. GitHub Actionsをコピー（既存workflowsは触らない）
