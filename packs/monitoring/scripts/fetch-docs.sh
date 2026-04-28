@@ -7,23 +7,25 @@ set -euo pipefail
 OUT_DIR="${1:-packs/monitoring/snapshots/$(date +%Y%m%d)}"
 mkdir -p "$OUT_DIR"
 
-# 監視対象URL（sources.yamlと同期）
-declare -A URLS=(
-  [overview]="https://code.claude.com/docs/en/overview"
-  [changelog]="https://code.claude.com/docs/en/changelog"
-  [hooks]="https://code.claude.com/docs/en/hooks"
-  [permissions]="https://code.claude.com/docs/en/permissions"
-  [subagents]="https://code.claude.com/docs/en/subagents"
-  [skills]="https://code.claude.com/docs/en/skills"
-  [chrome]="https://code.claude.com/docs/en/chrome"
-  [checkpointing]="https://code.claude.com/docs/en/checkpointing"
-  [anthropic-news]="https://www.anthropic.com/news"
+# 監視対象URL（sources.yamlと同期）— bash 3.2互換（連想配列不使用）
+URL_NAMES=(overview changelog hooks permissions subagents skills chrome checkpointing anthropic-news)
+URL_VALS=(
+  "https://code.claude.com/docs/en/overview"
+  "https://code.claude.com/docs/en/changelog"
+  "https://code.claude.com/docs/en/hooks"
+  "https://code.claude.com/docs/en/permissions"
+  "https://code.claude.com/docs/en/subagents"
+  "https://code.claude.com/docs/en/skills"
+  "https://code.claude.com/docs/en/chrome"
+  "https://code.claude.com/docs/en/checkpointing"
+  "https://www.anthropic.com/news"
 )
 
 mkdir -p "$OUT_DIR/docs"
 
-for name in "${!URLS[@]}"; do
-  url="${URLS[$name]}"
+for i in "${!URL_NAMES[@]}"; do
+  name="${URL_NAMES[$i]}"
+  url="${URL_VALS[$i]}"
   echo "→ $name : $url" >&2
   
   # curlで取得（HTML→text変換は別ツール推奨）
@@ -55,7 +57,7 @@ cat > "$OUT_DIR/docs/_meta.json" <<EOF
 {
   "fetched_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
   "tool": "$(if command -v lynx >/dev/null; then echo lynx; elif command -v pandoc >/dev/null; then echo pandoc; else echo curl-only; fi)",
-  "urls": $(printf '%s\n' "${!URLS[@]}" | jq -R . | jq -s .)
+  "urls": $(printf '%s\n' "${URL_NAMES[@]}" | jq -R . | jq -s .)
 }
 EOF
 

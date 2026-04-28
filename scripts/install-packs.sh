@@ -92,12 +92,12 @@ for p in "${SELECTED_PACKS[@]}"; do
   fi
 done
 
-# 重複排除
+# 重複排除 (bash 3.2互換 — 連想配列不使用)
 UNIQUE_PACKS=()
-declare -A _seen=()
+_seen_list=""
 for p in "${SELECTED_PACKS[@]}"; do
-  [ -n "${_seen[$p]:-}" ] && continue
-  _seen[$p]=1
+  case ",$_seen_list," in *",$p,"*) continue ;; esac
+  _seen_list="${_seen_list}${p},"
   UNIQUE_PACKS+=("$p")
 done
 SELECTED_PACKS=("${UNIQUE_PACKS[@]}")

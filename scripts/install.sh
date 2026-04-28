@@ -50,7 +50,7 @@ fi
 # 5. .gitignoreに追記（重複は避ける）
 GITIGNORE="$TARGET/.gitignore"
 touch "$GITIGNORE"
-for line in ".claude/settings.local.json" ".claude/fanout-logs/" ".claude/memory/"; do
+for line in ".claude/settings.local.json" ".claude/fanout-logs/" ".claude/memory/" ".env" ".env.*" "!.env.example" "*.pem" "*.key"; do
   if ! grep -qxF "$line" "$GITIGNORE"; then
     echo "$line" >> "$GITIGNORE"
   fi
